@@ -9,6 +9,7 @@ Control control(const double& t){
 }
 
 int main(){
+  std::cout << "---Testing dynamic constraint evaluation---" << std::endl;
   
   //Numerical integration parameters
   double dt = 0.03;
@@ -45,11 +46,15 @@ int main(){
   //Append the simulation parameters to y
   y.push_back(dt);
 
-  std::cout << "Y " << std::endl;
-  printVector(y);
-  
   //Evaluate the constraint for the variable y (should be zero)
   DecisionVar residual = myPend.constraintResidual(y);
-  std::cout << "Constraint Residual " << std::endl;
-  printVector(residual);
+  bool passed = true;
+  for(auto x : residual){
+    if(std::fabs(x)>1e-12){
+      passed = false;
+      std::cout << "\n\nUNIT TEST FAILED!\n\n" << std::endl;
+      break;
+    }
+  }
+  if(passed==true){std::cout << "\n\nUNIT TEST PASSED!\n\n" << std::endl;}
 }

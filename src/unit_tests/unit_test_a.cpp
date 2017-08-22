@@ -3,6 +3,7 @@
 #include "trajectories.h"
 
 int main(){
+  std::cout << "---Testing pendulum dynamics and jacobian calculation---" << std::endl;
   
   Pendulum overratedExample(10,0.1);
   
@@ -13,5 +14,5 @@ int main(){
   Matrix jacobian = overratedExample.systemJacobian(x,u);
   
   printVector(xdot);//Should be (1,1)
-  printMatrix(jacobian);//Should be [0,1,0;-1,0,1]
+  printMatrix(jacobian);//Should be [0,1,0;-1,0,1]  
 }

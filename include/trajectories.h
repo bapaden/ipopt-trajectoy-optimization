@@ -67,32 +67,11 @@ public:
                   controlDim(controlDim_),
                   numSteps(numSteps_),
                   dt(dt_)
-                  {
-                    std::cout << "Created dynamical system with " << stateDim << " states and " << controlDim << " inputs " << std::endl;
-                  }
+                  {}
                   
                   //evaluate the vector field at the state x_ with the input u_
                   virtual std::vector<double> vectorField(std::vector<double> x_, std::vector<double> u_)=0;
-                  
-//                   //Looks at the state and control in the optimization variable format and gets xdot
-//                   std::vector<double> vectorField(DecisionVar::const_iterator it) {
-//                     State x(stateDim);
-//                     Control u(controlDim);
-//                     
-//                     for(int i=0;i<stateDim;i++){
-//                       x[i] = *it;
-//                       it++;
-//                     }
-//                     for(int i=0;i<controlDim;i++){
-//                       u[i] = *it;
-//                       it++;
-//                     }
-//                     
-//                     //TODO copying a lot here
-//                     return vectorField(x,u);
-//                     
-//                   } 
-                  
+                                    
                   std::vector<double> vectorField(DecisionVar y, unsigned int index) {
                     State x(stateDim);
                     Control u(controlDim);
@@ -106,7 +85,6 @@ public:
                       index++;
                     }
                     
-                    //TODO copying a lot here
                     return vectorField(x,u);
                   }                   
                   
@@ -118,9 +96,6 @@ public:
                     int n = stateDim;
                     int m = controlDim;
                     int N = numSteps;
-//                     std::cout << "\nNum steps " << N << std::endl;
-//                     std::cout << "State Dimension " << n << std::endl;
-//                     std::cout << " Control Dimension " << m << std::endl << std::endl;
                     assert(y.size()==(N+1)*(n+m)+1);
                     double dt = y[(N+1)*(n+m)];
                     
@@ -135,7 +110,6 @@ public:
                       }
                     }
                     return residual;
-                    
                   }
                   
                   Matrix dynamicInfeasibility(  Trajectory x,   Input u,   double dt){
@@ -146,7 +120,6 @@ public:
                     for(int i=0;i<x.size()-1;i++){
                       residual[i] = x[i+1] - x[i] - dt*vectorField(x[i],u[i]);
                     }
-                    
                     return residual;
                   }
                   
@@ -156,8 +129,8 @@ public:
                   unsigned int control_dimension(){return controlDim;}
 };
 
-
 class Pendulum : public DynamicalSystem {
+
 public:
   Pendulum(unsigned int numSteps, double dt) : DynamicalSystem(2, 1,numSteps,dt) {}
   
@@ -175,7 +148,6 @@ public:
     //create 2x3 matrix for jacobian
     Matrix Jac(stateDim);
     for(int i=0;i<stateDim;i++){Jac[i].resize(controlDim+stateDim);}
-    
     
     Jac[0][0] = 0; 
     Jac[0][1] = 1; 
