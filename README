@@ -1,0 +1,27 @@
+#This project passes a nonlinear optimization to IPOPT 
+
+
+1) IPOPT can be downloaded with:
+
+git clone -b stable/3.12 https://github.com/coin-or/Ipopt.git CoinIpopt
+
+2) Before compiling IPOPT you need hsl. It is not open source, but a free copy can be requested from 
+
+http://www.hsl.rl.ac.uk/ipopt/ 
+
+3) Compile and install hsl as follows:
+
+	a) extract the copresses binaries into some directory "DIR/"
+	b) next move the files from DIR/include into usr/local/include and DIR/lib into usr/local/lib and DIR/lib/pkgconfig into usr/local/pkgconfig
+	c) run ldconfig to map the package names to the directory:
+		sudo ldconfig
+
+4) Now compile and install IPOPT:
+
+	cd .../CoinIpopt
+	./configure
+	make
+	make install
+	make test
+
+5) If there are issues with make test, it is likely hsl was not installed correctly
