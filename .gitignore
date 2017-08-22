@@ -1,0 +1,6 @@
+build/*
+*.out
+*.o
+*.so
+*.kdev4
+*.swp
