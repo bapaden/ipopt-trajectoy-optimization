@@ -1,44 +1,90 @@
 #ifndef SYSTEMS_H
 #define SYSTEMS_H
 
-#include <trajectories.h>
+#include <ipopt_adaptor.h>
 
-class FirstOrderSystem : public DynamicalSystem {
+/*
+ *Simple example:
+ *Dynamics: dx/dt = -x + u 
+ *Boundary Conditions: x(0)=1 x(tf)0
+ *Cost: Integral of g(x(t),u(t))=1 + x^2 + u^2 
+ *Constraints: h_1(x(t),u(t) = 0.5-u(t) h_2(t) = x(t)-1
+ */
+
+
+class FirstOrderSystem : public TPBVP {
 public:
-  FirstOrderSystem(unsigned int numSteps, double dt) : DynamicalSystem(1,1,numSteps,dt){}
+  FirstOrderSystem(unsigned int numSteps, double dt) : TPBVP(1,1,numSteps,dt){}
+
+  //~~~Cost, Dynamics, Constraints, Boundary conditions~~~//
   
-  std::vector<double> vectorField(std::vector<double> x, std::vector<double> u) final {
-    std::vector<double> xdot(stateDim);
+  //Define the running cost g(x(t),u(t)) whose integral is the cost
+  double g(Vector x, Vector u) final {
+    return 1 + x[0]*x[0] + u[0]*u[0] ;
+  }
+  
+  //System dynamics dx/dt = f(x(t),u(t)) 
+  Vector  f(Vector  x, Vector  u) final {
+    Vector  xdot(stateDim);
     xdot[0] = -x[0]+u[0];
     return xdot;
   }
   
-  Matrix systemJacobian(DecisionVar y, unsigned int index) final {
+  //State and control constraints h(x(t),u(t))<=0 
+  Vector  h(Vector  x, Vector  u) final {
+    assert(x.size()==n and u.size()==m);
+    Vector  h;
+    h.push_back(-0.25-x[0]);
+    h.push_back(u[0]-0.5);
+    
+    return h;
+  }
+  
+  //Boundary values
+  Matrix bv(){
+    enum {initialCondition=0,terminalCondition=1}; 
+    Matrix boundaryValues(2,n);
+    boundaryValues[initialCondition] = Vector({1.0});
+    boundaryValues[terminalCondition] = Vector({0.0});
+    return boundaryValues;
+  }
+  
+  //~~~Derivatives of problem system attributes~~~///
+  
+  //Gradient of running cost
+  Vector Dg(Vector x, Vector u) final {
+    return Vector({2*x[0],2*u[0]});
+  }
+  
+  //Jacobian of the dynamics with respect to (x,u). Df = [df/dx, df/du]
+  Matrix Df(Vector x, Vector u) final {
     Matrix Jacobian(stateDim,stateDim+controlDim);
     Jacobian[0][0] = -1.0;
     Jacobian[0][1] = 1.0;
     return Jacobian;
   }
   
-  std::vector<double> signalConstraint(std::vector<double> x, std::vector<double> u) final {
-    assert(x.size()==n and u.size()==m);
-    std::vector<double> h;
-    h.push_back(0.25-x[0]);
-//     double h0=0.25-x[0];
-//     double h1=-0.5-u[0];
-//     double h2=u[0]-0.5;
-    return h;
+  //Jacobian of the state-control constraints
+  Matrix Dh(Vector  x, Vector  u) final {
+    std::size_t numConstraints = Vector (h(x,u)).size();
+    Matrix dhdx(numConstraints,n+m);
+    dhdx[0][0] = -1;//d/dx h_1(x,u)
+    dhdx[0][1] = 0; //d/du h_1(x,u)
+    dhdx[1][0] = 0; //d/dx h_2(x,u)
+    dhdx[1][1] = 1;//d/du h_2(x,u)
+    
+    return dhdx;
   }
 };
 
-class Pendulum : public DynamicalSystem {
+class Pendulum : public TPBVP {
   
 public:
-  Pendulum(unsigned int numSteps, double dt) : DynamicalSystem(2, 1,numSteps,dt) {}
+  Pendulum(unsigned int numSteps, double dt) : TPBVP(2, 1,numSteps,dt) {}
   
   //xdot = f(x,u) - dynamical model of a pendulum
-  std::vector<double> vectorField(std::vector<double> x, std::vector<double> u) final {
-    std::vector<double> xdot(stateDim);
+  Vector  f(Vector  x, Vector  u) final {
+    Vector  xdot(stateDim);
     xdot[0] = x[1];
     xdot[1] = -sin(x[0])+u[0];
     
@@ -46,7 +92,7 @@ public:
   }
 
   //Jac = [df/dx df/du] - jacobian of f evaluated at (y[index],...,y[index+stateDim+controlDim-1])
-Matrix systemJacobian(DecisionVar y, unsigned int index) final {
+Matrix Df(Vector x, Vector u) final {
     
     //create 2x3 matrix for jacobian
     Matrix Jacobian(stateDim,stateDim+controlDim);
@@ -54,7 +100,7 @@ Matrix systemJacobian(DecisionVar y, unsigned int index) final {
     Jacobian[0][0] = 0; 
     Jacobian[0][1] = 1; 
     Jacobian[0][2] = 0;
-    Jacobian[1][0] = cos(y[index]);//first state 
+    Jacobian[1][0] = cos(x[0]);//first state 
     Jacobian[1][1] = 0;
     Jacobian[1][2] = 1;
     
@@ -62,8 +108,11 @@ Matrix systemJacobian(DecisionVar y, unsigned int index) final {
   }
   
   //no constraints
-  std::vector<double> signalConstraint(std::vector<double> x, std::vector<double> u){
-    return std::vector<double>(0);
+  Vector  h(Vector  x, Vector  u){
+    return Vector (0);
+  }
+  Matrix Dh(Vector x, Vector u){
+    return Matrix(0,0);
   }
 };
 

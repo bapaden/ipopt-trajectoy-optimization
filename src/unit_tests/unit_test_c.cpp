@@ -33,7 +33,7 @@ int main(){
     
     //one time-step
     u = control(t);
-    x = x + dt*myPend.vectorField(x,u);
+    x = x + dt*myPend.f(x,u);
     t+=dt;
     
     //Append the new state and control to the vector y
@@ -50,8 +50,8 @@ int main(){
   
   //Evaluate the constraint for the variable y (should be zero)
   printVector(y);
-  std::vector<double> residual = myPend.constraintResidual(y);
+  std::vector<double> residual = myPend.phi(y);
   printVector(residual);
-  Matrix dgdy = myPend.constraintJacobian(y);
+  Matrix dgdy = myPend.Dphi(y);
   
 }

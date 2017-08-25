@@ -1,5 +1,5 @@
-#ifndef TRAJECTORIES_H
-#define TRAJECTORIES_H
+#ifndef IPOPT_ADAPTOR_H
+#define IPOPT_ADAPTOR_H
 
 #include <cmath>
 #include <iostream>
@@ -39,9 +39,9 @@ public:
                   }
                   
                   //evaluate the vector field at the state x_ with the input u_
-                  virtual std::vector<double> vectorField(std::vector<double> x_, std::vector<double> u_)=0;
+                  virtual std::vector<double> f(std::vector<double> x_, std::vector<double> u_)=0;
                                     
-                  std::vector<double> vectorField(DecisionVar y, unsigned int index) {
+                  std::vector<double> f(DecisionVar y, unsigned int index) {
                     State x(stateDim);
                     Control u(controlDim);
                     
@@ -53,14 +53,14 @@ public:
                       u[i] = y[index];
                       index++;
                     }
-                    return vectorField(x,u);
+                    return f(x,u);
                   }                   
                   
                   //evaluate the jacobian of the vector field at x_ with respect to x_ and u_
-                  virtual Matrix systemJacobian(DecisionVar y, unsigned int index)=0;
+                  virtual Matrix Df(DecisionVar y, unsigned int index)=0;
                   
                   //vector structure [x[0] u[0] x[1] u[1] ... dt]
-                  std::vector<double> constraintResidual(DecisionVar& y){
+                  std::vector<double> phi(DecisionVar& y){
                     int n = stateDim;
                     int m = controlDim;
                     int N = numSteps;
@@ -71,7 +71,7 @@ public:
                     //time step j from 0 to N-2 
                     for(int j=0;j<N;j++){
                       //state i from 0 to n-1
-                      State xdot = vectorField(y,j*(n+m));
+                      State xdot = f(y,j*(n+m));
                       for(int i=0;i<n;i++){
                         double error = y[(j+1)*(n+m)+i]-y[j*(n+m)+i]-y[(N+1)*(n+m)]*xdot[i];
                         residual.push_back(error);
@@ -80,7 +80,8 @@ public:
                     return residual;
                   }
                   
-                  Matrix constraintJacobian(DecisionVar y){
+                  //Numerical approximation to first variation diff constraint with respect to (x,u)
+                  Matrix Dphi(DecisionVar y){
                     
                     int n = stateDim;
                     int m = controlDim;
@@ -89,11 +90,11 @@ public:
                     double count = 0;
                     Matrix dgdy(n*N,(N+1)*(n+m));
                     for(int p=0;p<N;p++){
-                      State xdot = vectorField(y,p*(n+m));
+                      State xdot = f(y,p*(n+m));
                       for(int q=0;q<n;q++){
                         dgdy[p*n+q][(N+1)*(n+m)-1] = xdot[q];
                         for(int j=0;j<N+1;j++){
-                          Matrix dfdx = systemJacobian(y,j*(m+n));
+                          Matrix dfdx = Df(y,j*(m+n));
                           for(int i=0;i<n+m;i++){
                             if(p==j){
                               if(i<n){dgdy[p*n+q][j*(n+m)+i]= -1.0 - dt*dfdx[q][i];}
@@ -109,10 +110,10 @@ public:
                   }
                   
                   //vector of constraints of the form h(x(t),u(t))<=0
-                  virtual std::vector<double> signalConstraint(std::vector<double> x, std::vector<double> u)=0;
+                  virtual std::vector<double> h(std::vector<double> x, std::vector<double> u)=0;
                   //Apply the user specified constraint to each timestep
-                  std::vector<double> constraints(DecisionVar y){
-                    std::vector<double> h;
+                  std::vector<double> H(DecisionVar y){
+                    std::vector<double> H_;
                     std::vector<double>::const_iterator x_first,x_last,u_first,u_last;
                     for(int j=0;j<N+1;j++){
 
@@ -123,13 +124,13 @@ public:
                       
                       std::vector<double> x(x_first,x_last+1);
                       std::vector<double> u(u_first,u_last+1);
-                      std::vector<double> h_t( signalConstraint(x,u) );
-                      h.insert(h.end(),h_t.begin(),h_t.end());
+                      std::vector<double> h_t( h(x,u) );
+                      H_.insert(H_.end(),h_t.begin(),h_t.end());
                     }
                     return h;
                   }
                   
-                  std::vector<double> constraintJacobian(DecisionVar y){
+                  std::vector<double> Dh(DecisionVar y){
                     
                   }
                   

@@ -5,8 +5,8 @@
 // #include "trajectories.h"
 
 //control signal for the simulation u(t)
-Control control(const double& t){
-  Control input({0.0});
+Vector control(const double& t){
+  Vector input({0.01});
   return input;
 }
 
@@ -20,12 +20,12 @@ int main(){
   FirstOrderSystem sys(num_steps,dt);
   
   //Initial state, control, and time 
-  State x({1.0});
+  Vector x({1.0});
   double t = 0;
-  Control u = control(t0);
+  Vector u = control(t0);
   
   //The y is the the traj and control stacked up into a vector with params at the end: y=(x_0 u_0 x_1 u_1 ... dt)
-  DecisionVar y({x});
+  Vector y({x});
   y.push_back(u[0]);
   
   //Do the simulation with Euler's method
@@ -33,7 +33,7 @@ int main(){
     
     //one time-step
     u = control(t);
-    x = x + dt*sys.vectorField(x,u);
+    x = x + dt*sys.f(x,u);
     t+=dt;
     
     //Append the new state and control to the vector y
@@ -51,14 +51,29 @@ int main(){
   //Evaluate the constraint for the variable y (should be zero)
   std::cout << "trajectory and control " << std::endl;
   printVector(y);
-  std::vector<double> residual = sys.constraintResidual(y);
+  
+  std::vector<double> residual = sys.phi(y);
   std::cout << "dynamic feasibility residual " << std::endl;
   printVector(residual);
-  Matrix dgdy = sys.constraintJacobian(y);
   
-  std::vector<double> signal_constraints = sys.constraints(y);
+  Matrix dgdy = sys.Dphi(y);
+  std::cout << "first variation of dynamic constraint" << std::endl;
+  printMatrix(dgdy);
   
-  std::cout<< "state and input constraints " << std::endl;
+  std::vector<double> signal_constraints = sys.H(y);
+  std::cout << "state and input constraints " << std::endl;
   printVector(signal_constraints);
+  
+  Matrix constraint_jacobian = sys.DH(y);
+  std::cout<< "first variataion of state-control constraint" << std::endl;
+  printMatrix(constraint_jacobian);
+  
+  double cost = sys.J(y);
+  std::cout << " cost is " << cost << std::endl;
+  
+  Vector gradCost = sys.DJ(y);
+  std::cout << " gradient of cost is " << std::endl;
+  printVector(gradCost);
+  
   
 }

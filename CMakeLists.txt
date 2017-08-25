@@ -18,9 +18,6 @@ link_directories(${IPOPT_LIBRARY_DIRS})
 add_library(opt_interface src/opt_interface.cpp)
 
 add_executable(ipopt_example src/opt_main.cpp)
-add_executable(unit_test_a src/unit_tests/unit_test_a.cpp)
-add_executable(unit_test_b src/unit_tests/unit_test_b.cpp)
-add_executable(unit_test_c src/unit_tests/unit_test_c.cpp)
 add_executable(unit_test_d src/unit_tests/unit_test_d.cpp)
 
 target_link_libraries(ipopt_example opt_interface)
