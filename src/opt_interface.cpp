@@ -15,15 +15,15 @@
 // using namespace Ipopt;
 
 // constructor
-PracticeNLP::PracticeNLP()
+TrajOpt::TrajOpt()
 {}
 
 //destructor
-PracticeNLP::~PracticeNLP()
+TrajOpt::~TrajOpt()
 {}
 
 // returns the size of the problem
-bool PracticeNLP::get_nlp_info(Ipopt::Index& n, 
+bool TrajOpt::get_nlp_info(Ipopt::Index& n, 
                                Ipopt::Index& m, 
                                Ipopt::Index& nnz_jac_g,
                                Ipopt::Index& nnz_h_lag, 
@@ -49,7 +49,7 @@ bool PracticeNLP::get_nlp_info(Ipopt::Index& n,
 }
 
 // returns the variable bounds
-bool PracticeNLP::get_bounds_info(Ipopt::Index n, 
+bool TrajOpt::get_bounds_info(Ipopt::Index n, 
                                   Ipopt::Number* x_l, 
                                   Ipopt::Number* x_u,
                                   Ipopt::Index m, 
@@ -87,7 +87,7 @@ bool PracticeNLP::get_bounds_info(Ipopt::Index n,
 }
 
 // returns the initial point for the problem
-bool PracticeNLP::get_starting_point(Ipopt::Index n, 
+bool TrajOpt::get_starting_point(Ipopt::Index n, 
                                      bool init_x, 
                                      Ipopt::Number* x,
                                      bool init_z, 
@@ -114,7 +114,7 @@ bool PracticeNLP::get_starting_point(Ipopt::Index n,
 }
 
 // returns the value of the objective function
-bool PracticeNLP::eval_f(Ipopt::Index n, 
+bool TrajOpt::eval_f(Ipopt::Index n, 
                          const Ipopt::Number* x, 
                          bool new_x, Ipopt::Number& obj_value)
 {
@@ -126,7 +126,7 @@ bool PracticeNLP::eval_f(Ipopt::Index n,
 }
 
 // return the gradient of the objective function grad_{x} f(x)
-bool PracticeNLP::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x, bool new_x, Ipopt::Number* grad_f)
+bool TrajOpt::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x, bool new_x, Ipopt::Number* grad_f)
 {
   assert(n == 4);
 
@@ -139,7 +139,7 @@ bool PracticeNLP::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x, bool new_x
 }
 
 // return the value of the constraints: g(x)
-bool PracticeNLP::eval_g(Ipopt::Index n, 
+bool TrajOpt::eval_g(Ipopt::Index n, 
                          const Ipopt::Number* x, 
                          bool new_x, 
                          Ipopt::Index m, 
@@ -155,7 +155,7 @@ bool PracticeNLP::eval_g(Ipopt::Index n,
 }
 
 // return the structure or values of the jacobian
-bool PracticeNLP::eval_jac_g(Ipopt::Index n, 
+bool TrajOpt::eval_jac_g(Ipopt::Index n, 
                            const Ipopt::Number* x, bool new_x,
                            Ipopt::Index m, 
                            Ipopt::Index nele_jac, 
@@ -202,7 +202,7 @@ bool PracticeNLP::eval_jac_g(Ipopt::Index n,
 }
 
 //return the structure or values of the hessian
-bool PracticeNLP::eval_h(Ipopt::Index n, 
+bool TrajOpt::eval_h(Ipopt::Index n, 
                          const Ipopt::Number* x, 
                          bool new_x,
                          Ipopt::Number obj_factor, 
@@ -273,7 +273,7 @@ bool PracticeNLP::eval_h(Ipopt::Index n,
   return true;
 }
 
-void PracticeNLP::finalize_solution(Ipopt::SolverReturn status,
+void TrajOpt::finalize_solution(Ipopt::SolverReturn status,
                                   Ipopt::Index n, 
                                   const Ipopt::Number* x, 
                                   const Ipopt::Number* z_L, 

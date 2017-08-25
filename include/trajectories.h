@@ -1,3 +1,6 @@
+#ifndef TRAJECTORIES_H
+#define TRAJECTORIES_H
+
 #include <cmath>
 #include <iostream>
 #include <assert.h>
@@ -6,49 +9,11 @@
 
 typedef std::vector<double> State;
 typedef std::vector<double> Control;
-typedef std::vector< std::vector<double> > Matrix;
 typedef std::vector< State > Trajectory;
 typedef std::vector< Control > Input;
 typedef std::vector< std::vector < double > > Jacobian;
 typedef std::vector< double > DecisionVar;
 typedef DecisionVar::iterator Iter;
-
-void printVector(  std::vector<double>& xdot){
-  std::cout << "(";
-  for(int i=0;i<xdot.size()-1;i++){
-    std::cout << xdot[i] << "," << std::endl;
-  }
-  std::cout << xdot[xdot.size()-1] << ")" << std::endl;
-}
-
-void printMatrix(   Matrix& matrix ){
-  
-  
-  
-  if(matrix.size()>0){
-    for(int i=0;i<matrix.size();i++){
-      std::cout << "|";
-      for(int j=0;j<matrix[i].size();j++){
-        std::cout << matrix[i][j] << " ";
-      }
-      std::cout << "|" << std::endl;
-    }
-  }
-  
-}
-
-std::vector<double> reshape(std::vector< std::vector<double> > matrix){
-  assert(matrix.size()>0);
-  
-  std::vector<double> mat2vec;
-  printMatrix(matrix);
-  for(int i=0;i<matrix.size();i++){
-    for(int j=0;j<matrix[0].size();j++){
-      mat2vec.push_back(matrix[i][j]);
-    }
-  }
-  return mat2vec;
-}
 
 class DynamicalSystem {
 protected: 
@@ -84,12 +49,11 @@ public:
                       u[i] = y[index];
                       index++;
                     }
-                    
                     return vectorField(x,u);
                   }                   
                   
                   //evaluate the jacobian of the vector field at x_ with respect to x_ and u_
-                  virtual Matrix systemJacobian(  std::vector<double> x_,   std::vector<double> u_)=0;
+                  virtual Matrix systemJacobian(DecisionVar y, unsigned int index)=0;
                   
                   //vector structure [x[0] u[0] x[1] u[1] ... dt]
                   std::vector<double> constraintResidual(DecisionVar& y){
@@ -112,11 +76,40 @@ public:
                     return residual;
                   }
                   
+                  Matrix constraintJacobian(DecisionVar y){
+                    
+                    int n = stateDim;
+                    int m = controlDim;
+                    int N = numSteps;
+                    double dt = y[(N+1)*(n+m)];
+                    double count = 0;
+                    Matrix dgdy(n*N,(N+1)*(n+m));
+                    for(int p=0;p<N;p++){
+                      State xdot = vectorField(y,p*(n+m));
+                      for(int q=0;q<n;q++){
+                        dgdy[p*n+q][(N+1)*(n+m)-1] = xdot[q];
+                        for(int j=0;j<N+1;j++){
+                          Matrix dfdx = systemJacobian(y,j*(m+n));
+                          for(int i=0;i<n+m;i++){
+                            if(p==j){
+                              if(i<n){dgdy[p*n+q][j*(n+m)+i]= -1.0 - dt*dfdx[q][i];}
+                              else{dgdy[p*n+q][j*(n+m)+i]=dt*dfdx[q][i];}
+                            }
+                            if(j-1==p and i == q){dgdy[p*n+q][j*(n+m)+i]=1;}
+                          }
+                        }
+                      }    
+                    }  
+                        
+                    printMatrix(dgdy);
+                    return dgdy;
+                  }
+                  
                   Matrix dynamicInfeasibility(  Trajectory x,   Input u,   double dt){
                     assert(x.size()==u.size());
                     
                     //x[i+1] = x[i] + dt*f(x,u) => res[i] = x[i+1]-x[i]-dt*f(x,u)
-                    Matrix residual(x.size()-1);
+                    Matrix residual(x.size()-1,x[0].size());
                     for(int i=0;i<x.size()-1;i++){
                       residual[i] = x[i+1] - x[i] - dt*vectorField(x[i],u[i]);
                     }
@@ -129,33 +122,4 @@ public:
                   unsigned int control_dimension(){return controlDim;}
 };
 
-class Pendulum : public DynamicalSystem {
-
-public:
-  Pendulum(unsigned int numSteps, double dt) : DynamicalSystem(2, 1,numSteps,dt) {}
-  
-  std::vector<double> vectorField(std::vector<double> x, std::vector<double> u) final {
-    std::vector<double> xdot(stateDim);
-    xdot[0] = x[1];
-    xdot[1] = -sin(x[0])+u[0];
-    
-    return xdot;
-  }
-  
-  Matrix systemJacobian(State x, Control u) final {
-    assert(x.size()==stateDim);
-    assert(u.size()==controlDim);
-    //create 2x3 matrix for jacobian
-    Matrix Jac(stateDim);
-    for(int i=0;i<stateDim;i++){Jac[i].resize(controlDim+stateDim);}
-    
-    Jac[0][0] = 0; 
-    Jac[0][1] = 1; 
-    Jac[0][2] = 0;
-    Jac[1][0] = cos(x[0]); 
-    Jac[1][1] = 0;
-    Jac[1][2] = 1;
-    
-    return Jac;
-  }
-};
+#endif

@@ -1,6 +1,6 @@
 //This unit test checks that the DynamicalSystem class is working properly
 
-#include "trajectories.h"
+#include <systems.h>
 
 int main(){
   std::cout << "---Testing pendulum dynamics and jacobian calculation---" << std::endl;
@@ -10,9 +10,18 @@ int main(){
   State x({M_PI, 1.0});
   Control u({1.0});
   
-  State xdot = overratedExample.vectorField(x,u);
-  Matrix jacobian = overratedExample.systemJacobian(x,u);
+  DecisionVar y;
+  y.insert(y.end(),x.begin(),x.end());
+  y.insert(y.end(),u.begin(),u.end());
   
-  printVector(xdot);//Should be (1,1)
-  printMatrix(jacobian);//Should be [0,1,0;-1,0,1]  
+  std::cout << "(x,u)=";
+  printVector(y);
+  
+  State xdot = overratedExample.vectorField(x,u);
+  std::cout << "xdot=" << std::endl;
+  printVector(xdot);
+  std::cout << "\ndf/dx=" <<std::endl;
+  Matrix jacobian = overratedExample.systemJacobian(y,0);
+  printMatrix(jacobian);//Should be [0,1,0;-1,0,1] 
+  
 }

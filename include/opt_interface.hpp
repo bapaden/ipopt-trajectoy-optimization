@@ -34,14 +34,14 @@
  *
  *
  */
-class PracticeNLP : public Ipopt::TNLP
+class TrajOpt : public Ipopt::TNLP
 {
 public:
   /** default constructor */
-  PracticeNLP();
+  TrajOpt();
 
   /** default destructor */
-  virtual ~PracticeNLP();
+  virtual ~TrajOpt();
 
   /**@name Overloaded from TNLP */
   //@{
@@ -149,9 +149,9 @@ private:
    *  
    */
   //@{
-  //  PracticeNLP();
-  PracticeNLP(const PracticeNLP&);
-  PracticeNLP& operator=(const PracticeNLP&);
+  //  TrajOpt();
+  TrajOpt(const TrajOpt&);
+  TrajOpt& operator=(const TrajOpt&);
   //@}
 };
 
