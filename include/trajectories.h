@@ -15,7 +15,7 @@ typedef std::vector< std::vector < double > > Jacobian;
 typedef std::vector< double > DecisionVar;
 typedef DecisionVar::iterator Iter;
 
-class DynamicalSystem {
+class OptControlProb {
 protected: 
   unsigned int stateDim;
   unsigned int controlDim;
@@ -24,7 +24,7 @@ protected:
   
 public:
   //ctor
-  DynamicalSystem(unsigned int stateDim_, 
+  OptControlProb(unsigned int stateDim_, 
                   unsigned int controlDim_,
                   unsigned int numSteps_,
                   double dt_):
@@ -101,20 +101,10 @@ public:
                       }    
                     }  
                         
-                    printMatrix(dgdy);
                     return dgdy;
                   }
                   
-                  Matrix dynamicInfeasibility(  Trajectory x,   Input u,   double dt){
-                    assert(x.size()==u.size());
-                    
-                    //x[i+1] = x[i] + dt*f(x,u) => res[i] = x[i+1]-x[i]-dt*f(x,u)
-                    Matrix residual(x.size()-1,x[0].size());
-                    for(int i=0;i<x.size()-1;i++){
-                      residual[i] = x[i+1] - x[i] - dt*vectorField(x[i],u[i]);
-                    }
-                    return residual;
-                  }
+//                   virtual std::vector<double> signalConstraint()=0;
                   
                   double timeStep(){return dt;}
                   unsigned int steps(){return numSteps;}

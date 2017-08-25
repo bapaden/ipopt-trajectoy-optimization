@@ -10,16 +10,15 @@
 #include <IpIpoptApplication.hpp>
 #include <iostream>
 
-#include "opt_interface.hpp"
+#include <opt_interface.hpp>
 
 
-// using namespace Ipopt;
 
 int main(int argv, char* argc[])
 {
   // Create a new instance of your nlp
   //  (use a SmartPtr, not raw)
-  Ipopt::SmartPtr<Ipopt::TNLP> mynlp = new PracticeNLP();
+  Ipopt::SmartPtr<Ipopt::TNLP> mynlp = new TrajOpt();
 
   // Create a new instance of IpoptApplication
   //  (use a SmartPtr, not raw)
@@ -33,6 +32,7 @@ int main(int argv, char* argc[])
   //       suitable for your optimization problem.
   app->Options()->SetNumericValue("tol", 1e-7);
   app->Options()->SetStringValue("mu_strategy", "adaptive");
+  app->Options()->SetStringValue("hessian_approximation","limited_memory");
   app->Options()->SetStringValue("output_file", "ipopt.out");
   // The following overwrites the default name (ipopt.opt) of the
   // options file

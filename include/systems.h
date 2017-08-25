@@ -3,9 +3,9 @@
 
 #include <trajectories.h>
 
-class FirstOrderSystem : public DynamicalSystem {
+class FirstOrderSystem : public OptControlProb {
 public:
-  FirstOrderSystem(unsigned int numSteps, double dt) : DynamicalSystem(1,1,numSteps,dt){}
+  FirstOrderSystem(unsigned int numSteps, double dt) : OptControlProb(1,1,numSteps,dt){}
   
   std::vector<double> vectorField(std::vector<double> x, std::vector<double> u) final {
     std::vector<double> xdot(stateDim);
@@ -21,10 +21,10 @@ public:
   }
 };
 
-class Pendulum : public DynamicalSystem {
+class Pendulum : public OptControlProb {
   
 public:
-  Pendulum(unsigned int numSteps, double dt) : DynamicalSystem(2, 1,numSteps,dt) {}
+  Pendulum(unsigned int numSteps, double dt) : OptControlProb(2, 1,numSteps,dt) {}
   
   //xdot = f(x,u) - dynamical model of a pendulum
   std::vector<double> vectorField(std::vector<double> x, std::vector<double> u) final {

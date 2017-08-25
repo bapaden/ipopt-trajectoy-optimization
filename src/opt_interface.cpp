@@ -18,22 +18,25 @@
 TrajOpt::TrajOpt()
 {}
 
+// TrajOpt::TrajOpt(OptControlProb& probData_):probData(probData_){}
+
+
 //destructor
 TrajOpt::~TrajOpt()
 {}
 
 // returns the size of the problem
-bool TrajOpt::get_nlp_info(Ipopt::Index& n, 
-                               Ipopt::Index& m, 
+bool TrajOpt::get_nlp_info(Ipopt::Index& numVariables, 
+                               Ipopt::Index& numConstraints, 
                                Ipopt::Index& nnz_jac_g,
                                Ipopt::Index& nnz_h_lag, 
                                Ipopt::TNLP::IndexStyleEnum& index_style)
 {
   // The problem described in HS071_NLP.hpp has 4 variables, x[0] through x[3]
-  n = 4;
+  numVariables = 4;
 
   // one equality constraint and one inequality constraint
-  m = 2;
+  numConstraints = 2;
 
   // in this example the jacobian is dense and contains 8 nonzeros
   nnz_jac_g = 8;

@@ -10,6 +10,7 @@
 #define OPT_INTERFACE_HPP
 
 #include <IpTNLP.hpp>
+#include <trajectories.h>
 
 // using namespace Ipopt;
 
@@ -36,9 +37,11 @@
  */
 class TrajOpt : public Ipopt::TNLP
 {
+//   OptControlProb probData;
 public:
   /** default constructor */
   TrajOpt();
+//   TrajOpt(OptControlProb& probData_):probData(probData_){}
 
   /** default destructor */
   virtual ~TrajOpt();

@@ -53,5 +53,6 @@ int main(){
   std::vector<double> residual = myPend.constraintResidual(y);
   printVector(residual);
   Matrix dgdy = myPend.constraintJacobian(y);
+  printMatrix(dgdy);
   
 }

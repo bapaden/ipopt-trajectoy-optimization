@@ -14,9 +14,9 @@ int main(){
   std::cout << "---Testing numerical approximation constraint jacobian---" << std::endl;
   
   //Numerical integration parameters
-  double dt = 0.5;
+  double dt = 0.01;
   double t0 = 0.0;
-  int num_steps = 3;
+  int num_steps = 30;
   FirstOrderSystem sys(num_steps,dt);
   
   //Initial state, control, and time 
@@ -53,5 +53,7 @@ int main(){
   std::vector<double> residual = sys.constraintResidual(y);
   printVector(residual);
   Matrix dgdy = sys.constraintJacobian(y);
+  printMatrix(dgdy);
+  
   
 }
