@@ -19,6 +19,16 @@ public:
     Jacobian[0][1] = 1.0;
     return Jacobian;
   }
+  
+  std::vector<double> signalConstraint(std::vector<double> x, std::vector<double> u) final {
+    assert(x.size()==n and u.size()==m);
+    std::vector<double> h;
+    h.push_back(0.25-x[0]);
+//     double h0=0.25-x[0];
+//     double h1=-0.5-u[0];
+//     double h2=u[0]-0.5;
+    return h;
+  }
 };
 
 class Pendulum : public DynamicalSystem {
@@ -49,6 +59,11 @@ Matrix systemJacobian(DecisionVar y, unsigned int index) final {
     Jacobian[1][2] = 1;
     
     return Jacobian;
+  }
+  
+  //no constraints
+  std::vector<double> signalConstraint(std::vector<double> x, std::vector<double> u){
+    return std::vector<double>(0);
   }
 };
 

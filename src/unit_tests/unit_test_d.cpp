@@ -49,9 +49,16 @@ int main(){
   y.push_back(dt);
   
   //Evaluate the constraint for the variable y (should be zero)
+  std::cout << "trajectory and control " << std::endl;
   printVector(y);
   std::vector<double> residual = sys.constraintResidual(y);
+  std::cout << "dynamic feasibility residual " << std::endl;
   printVector(residual);
   Matrix dgdy = sys.constraintJacobian(y);
+  
+  std::vector<double> signal_constraints = sys.constraints(y);
+  
+  std::cout<< "state and input constraints " << std::endl;
+  printVector(signal_constraints);
   
 }

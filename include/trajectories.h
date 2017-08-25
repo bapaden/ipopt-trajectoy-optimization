@@ -17,10 +17,10 @@ typedef DecisionVar::iterator Iter;
 
 class DynamicalSystem {
 protected: 
-  unsigned int stateDim;
-  unsigned int controlDim;
-  unsigned int numSteps;
+  unsigned int stateDim,controlDim,numSteps,n,m,N;
   double dt;
+  std::vector<double> initCond;
+  std::vector<double> termCond;
   
 public:
   //ctor
@@ -32,7 +32,11 @@ public:
                   controlDim(controlDim_),
                   numSteps(numSteps_),
                   dt(dt_)
-                  {}
+                  {
+                    n = stateDim;
+                    m = controlDim;
+                    N = numSteps;
+                  }
                   
                   //evaluate the vector field at the state x_ with the input u_
                   virtual std::vector<double> vectorField(std::vector<double> x_, std::vector<double> u_)=0;
@@ -101,19 +105,32 @@ public:
                       }    
                     }  
                         
-                    printMatrix(dgdy);
                     return dgdy;
                   }
                   
-                  Matrix dynamicInfeasibility(  Trajectory x,   Input u,   double dt){
-                    assert(x.size()==u.size());
-                    
-                    //x[i+1] = x[i] + dt*f(x,u) => res[i] = x[i+1]-x[i]-dt*f(x,u)
-                    Matrix residual(x.size()-1,x[0].size());
-                    for(int i=0;i<x.size()-1;i++){
-                      residual[i] = x[i+1] - x[i] - dt*vectorField(x[i],u[i]);
+                  //vector of constraints of the form h(x(t),u(t))<=0
+                  virtual std::vector<double> signalConstraint(std::vector<double> x, std::vector<double> u)=0;
+                  //Apply the user specified constraint to each timestep
+                  std::vector<double> constraints(DecisionVar y){
+                    std::vector<double> h;
+                    std::vector<double>::const_iterator x_first,x_last,u_first,u_last;
+                    for(int j=0;j<N+1;j++){
+
+                      x_first = y.begin()+j*(n+m);
+                      x_last = x_first+n-1;
+                      u_first = x_last+1;
+                      u_last = u_first+m-1;
+                      
+                      std::vector<double> x(x_first,x_last+1);
+                      std::vector<double> u(u_first,u_last+1);
+                      std::vector<double> h_t( signalConstraint(x,u) );
+                      h.insert(h.end(),h_t.begin(),h_t.end());
                     }
-                    return residual;
+                    return h;
+                  }
+                  
+                  std::vector<double> constraintJacobian(DecisionVar y){
+                    
                   }
                   
                   double timeStep(){return dt;}

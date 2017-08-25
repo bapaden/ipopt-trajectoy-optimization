@@ -19,7 +19,7 @@ int main(int argv, char* argc[])
 {
   // Create a new instance of your nlp
   //  (use a SmartPtr, not raw)
-  Ipopt::SmartPtr<Ipopt::TNLP> mynlp = new PracticeNLP();
+  Ipopt::SmartPtr<Ipopt::TNLP> mynlp = new TrajOpt();
 
   // Create a new instance of IpoptApplication
   //  (use a SmartPtr, not raw)
