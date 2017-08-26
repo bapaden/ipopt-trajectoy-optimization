@@ -11,7 +11,6 @@
  *Constraints: h_1(x(t),u(t) = 0.5-u(t) h_2(t) = x(t)-1
  */
 
-
 class FirstOrderSystem : public TPBVP {
 public:
   FirstOrderSystem(unsigned int numSteps, double dt) : TPBVP(1,1,numSteps,dt){}
@@ -47,6 +46,28 @@ public:
     boundaryValues[initialCondition] = Vector({1.0});
     boundaryValues[terminalCondition] = Vector({0.0});
     return boundaryValues;
+  }
+  
+  //Linear interpolation
+  Matrix initialTraj(){
+    Matrix boundary = bv();
+    Matrix init(N+1,m+n);
+    
+    Vector control(m);
+    Vector ic = boundary[0];
+    ic.insert(ic.end(),control.begin(),control.end());
+    Vector tc = boundary[1];
+    tc.insert(tc.end(),control.begin(),control.end());
+    
+    for(int i=0;i<N+1;i++){
+      double lambda = double(i)/double(N);
+      init[i]=lambda*ic + (1.0-lambda)*tc; 
+    }
+    
+    std::cout << " Initial guess is " << std::endl;
+    init;
+    
+    return init;
   }
   
   //~~~Derivatives of problem system attributes~~~///
@@ -114,7 +135,15 @@ Matrix Df(Vector x, Vector u) final {
   Matrix Dh(Vector x, Vector u){
     return Matrix(0,0);
   }
+  
+  //Boundary values
+  Matrix bv() final {
+    enum {initialCondition=0,terminalCondition=1}; 
+    Matrix boundaryValues(2,n);
+    boundaryValues[initialCondition] = Vector({M_PI,0.0});
+    boundaryValues[terminalCondition] = Vector({0.0,0.0});
+    return boundaryValues;
+  }
 };
-
 
 #endif

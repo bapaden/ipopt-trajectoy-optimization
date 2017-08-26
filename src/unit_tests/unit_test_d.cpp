@@ -75,5 +75,4 @@ int main(){
   std::cout << " gradient of cost is " << std::endl;
   printVector(gradCost);
   
-  
 }

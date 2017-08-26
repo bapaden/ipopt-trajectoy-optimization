@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "opt_interface.hpp"
+#include "systems.h"
 
 
 // using namespace Ipopt;
@@ -19,7 +20,8 @@ int main(int argv, char* argc[])
 {
   // Create a new instance of your nlp
   //  (use a SmartPtr, not raw)
-  Ipopt::SmartPtr<Ipopt::TNLP> mynlp = new TrajOpt();
+  TPBVP* myProb = new FirstOrderSystem(5,0.1);
+  Ipopt::SmartPtr<Ipopt::TNLP> mynlp = new TrajOpt(myProb);
 
   // Create a new instance of IpoptApplication
   //  (use a SmartPtr, not raw)

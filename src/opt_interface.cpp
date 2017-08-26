@@ -11,7 +11,6 @@
 
 #include "opt_interface.hpp"
 
-
 // using namespace Ipopt;
 
 // constructor

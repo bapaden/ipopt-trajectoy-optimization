@@ -15,10 +15,10 @@ include_directories(${IPOPT_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/include)
 link_directories(${IPOPT_LIBRARY_DIRS})
 # link_directories(${CMAKE_SOURCE_DIR})
 
-add_library(opt_interface src/opt_interface.cpp)
+# add_library(opt_interface src/opt_interface.cpp)
 
 add_executable(ipopt_example src/opt_main.cpp)
 add_executable(unit_test_d src/unit_tests/unit_test_d.cpp)
 
-target_link_libraries(ipopt_example opt_interface)
+# target_link_libraries(ipopt_example opt_interface)
 target_link_libraries(ipopt_example ipopt)

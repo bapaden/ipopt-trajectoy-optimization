@@ -10,6 +10,8 @@
 #define OPT_INTERFACE_HPP
 
 #include <IpTNLP.hpp>
+#include <ipopt_adaptor.h>
+#include <limits>
 
 // using namespace Ipopt;
 
@@ -36,9 +38,13 @@
  */
 class TrajOpt : public Ipopt::TNLP
 {
+  TPBVP* myProb;
+  int n;//number of states
+  int m;//number of controls
+  int N;//number of time steps
 public:
   /** default constructor */
-  TrajOpt();
+  TrajOpt(TPBVP* myProb_);
 
   /** default destructor */
   virtual ~TrajOpt();
@@ -154,6 +160,256 @@ private:
   TrajOpt& operator=(const TrajOpt&);
   //@}
 };
+
+// constructor
+TrajOpt::TrajOpt(TPBVP* myProb_){
+  myProb=myProb_;
+  n=myProb->n;
+  m=myProb->m;
+  N=myProb->N;
+}
+
+//destructor
+TrajOpt::~TrajOpt()
+{}
+
+// returns the size of the problem
+bool TrajOpt::get_nlp_info(Ipopt::Index& numVars, 
+                           Ipopt::Index& numCons, 
+                           Ipopt::Index& nnz_jac_g,
+                           Ipopt::Index& nnz_h_lag, 
+                           Ipopt::TNLP::IndexStyleEnum& index_style)
+{
+  // The total number of decision variables
+  numVars = (N+1)*(n+m)+1;
+  
+  // Constraints for the dynamics and state-control constraint
+  numCons = N*(n+m)+(myProb->H(Vector(numVars))).size();
+  
+  //Number of nonzero entries in dgdz
+  nnz_jac_g = numVars*numCons;
+  
+  // the hessian is also dense and has 16 total nonzeros, but we
+  // only need the lower left corner (since it is symmetric)
+  nnz_h_lag = numVars*numVars;
+  
+  // use the C style indexing (0-based)
+  index_style = Ipopt::TNLP::C_STYLE;
+  
+  return true;
+}
+
+// returns the variable bounds
+bool TrajOpt::get_bounds_info(Ipopt::Index numVars, 
+                              Ipopt::Number* y_l, 
+                              Ipopt::Number* y_u,
+                              Ipopt::Index numCons, 
+                              Ipopt::Number* g_l, 
+                              Ipopt::Number* g_u)
+{
+  // here, the n and m we gave IPOPT in get_nlp_info are passed back to us.
+  // If desired, we could assert to make sure they are what we think they are.
+  assert(numVars == (N+1)*(n+m)+1);
+  assert(numCons == N*(n+m)+(myProb->H(Vector(numVars))).size());
+
+  for(int i=0;i<numVars;i++){
+    y_l[i]=std::numeric_limits<double>::min();//+infinity
+    y_u[i]=std::numeric_limits<double>::max();//-infinity
+  }
+  
+  // Initial condition
+  for(int i=0; i<n; i++) {
+    y_l[i] =y_u[i] = (myProb->bv())[0][i];
+  }
+  
+  // Terminal condition
+  for(int i=0;i<n; i++){
+    y_l[N*(n+m)+i] = y_u[N*(n+m)+i] = (myProb->bv())[1][i];
+  }
+  
+  // Equality constraints for dynamic feasibility
+  for(int i=0;i<(N+1)*(n+m);i++){
+    g_l[i]=g_u[i]=0.0;
+  }
+  
+  //constrants for h(x,u)<=0 
+  for(int i=0;i<numCons;i++){
+    g_l[(N+1)*(n+m)+i] = std::numeric_limits<double>::min();
+    g_u[(N+1)*(n+m)+i] = 0.0;
+  }
+  
+  return true;
+}
+
+// returns the initial point for the problem
+bool TrajOpt::get_starting_point(Ipopt::Index numVars, 
+                                 bool init_x, 
+                                 Ipopt::Number* y,
+                                 bool init_z, 
+                                 Ipopt::Number* z_L, 
+                                 Ipopt::Number* z_U,
+                                 Ipopt::Index numCons, 
+                                 bool init_lambda,
+                                 Ipopt::Number* lambda)
+{
+  assert(init_x == true);
+  assert(init_z == false);
+  assert(init_lambda == false);
+  
+  // initialize to the given starting point
+  Vector init = myProb->initialGuess();
+  
+  //Write into y
+  for(int i=0;i<init.size();i++){
+    y[i]=init[i];
+  }
+  
+  return true;
+}
+
+// returns the value of the objective function
+bool TrajOpt::eval_f(Ipopt::Index n, 
+                     const Ipopt::Number* x, 
+                     bool new_x, Ipopt::Number& obj_value)
+{
+  assert(n == 4);
+  
+  obj_value = x[0] * x[3] * (x[0] + x[1] + x[2]) + x[2];
+  
+  return true;
+}
+
+// return the gradient of the objective function grad_{x} f(x)
+bool TrajOpt::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x, bool new_x, Ipopt::Number* grad_f)
+{
+  assert(n == 4);
+  
+  grad_f[0] = x[0] * x[3] + x[3] * (x[0] + x[1] + x[2]);
+  grad_f[1] = x[0] * x[3];
+  grad_f[2] = x[0] * x[3] + 1;
+  grad_f[3] = x[0] * (x[0] + x[1] + x[2]);
+  
+  return true;
+}
+
+// return the value of the constraints: g(x)
+bool TrajOpt::eval_g(Ipopt::Index n, 
+                     const Ipopt::Number* x, 
+                     bool new_x, 
+                     Ipopt::Index m, 
+                     Ipopt::Number* g)
+{
+  assert(n == 4);
+  assert(m == 2);
+  
+  g[0] = x[0] * x[1] * x[2] * x[3];
+  g[1] = x[0]*x[0] + x[1]*x[1] + x[2]*x[2] + x[3]*x[3];
+  
+  return true;
+}
+
+// return the structure or values of the jacobian
+bool TrajOpt::eval_jac_g(Ipopt::Index n, 
+                         const Ipopt::Number* x, bool new_x,
+                         Ipopt::Index m, 
+                         Ipopt::Index nele_jac, 
+                         Ipopt::Index* iRow, 
+                         Ipopt::Index *jCol,
+                         Ipopt::Number* values)
+{
+  if (values == NULL) {
+    // return the structure of the jacobian
+    
+    // this particular jacobian is dense
+    iRow[0] = 0;
+    jCol[0] = 0;
+    iRow[1] = 0;
+    jCol[1] = 1;
+    iRow[2] = 0;
+    jCol[2] = 2;
+    iRow[3] = 0;
+    jCol[3] = 3;
+    iRow[4] = 1;
+    jCol[4] = 0;
+    iRow[5] = 1;
+    jCol[5] = 1;
+    iRow[6] = 1;
+    jCol[6] = 2;
+    iRow[7] = 1;
+    jCol[7] = 3;
+  }
+  else {
+    // return the values of the jacobian of the constraints
+    
+    values[0] = x[1]*x[2]*x[3]; // 0,0
+    values[1] = x[0]*x[2]*x[3]; // 0,1
+    values[2] = x[0]*x[1]*x[3]; // 0,2
+    values[3] = x[0]*x[1]*x[2]; // 0,3
+    
+    values[4] = 2*x[0]; // 1,0
+    values[5] = 2*x[1]; // 1,1
+    values[6] = 2*x[2]; // 1,2
+    values[7] = 2*x[3]; // 1,3
+  }
+  
+  return true;
+}
+
+//return the structure or values of the hessian
+bool TrajOpt::eval_h(Ipopt::Index n, 
+                     const Ipopt::Number* x, 
+                     bool new_x,
+                     Ipopt::Number obj_factor, 
+                     Ipopt::Index m, 
+                     const Ipopt::Number* lambda,
+                     bool new_lambda, 
+                     Ipopt::Index nele_hess, 
+                     Ipopt::Index* iRow,
+                     Ipopt::Index* jCol, 
+                     Ipopt::Number* values)
+{
+  return false;
+}
+
+void TrajOpt::finalize_solution(Ipopt::SolverReturn status,
+                                Ipopt::Index n, 
+                                const Ipopt::Number* x, 
+                                const Ipopt::Number* z_L, 
+                                const Ipopt::Number* z_U,
+                                Ipopt::Index m,
+                                const Ipopt::Number* g, 
+                                const Ipopt::Number* lambda,
+                                Ipopt::Number obj_value,
+                                const Ipopt::IpoptData* ip_data,
+                                Ipopt::IpoptCalculatedQuantities* ip_cq)
+{
+  // here is where we would store the solution to variables, or write to a file, etc
+  // so we could use the solution.
+  
+  // For this example, we write the solution to the console
+  std::cout << std::endl << std::endl << "Solution of the primal variables, x" << std::endl;
+  for (Ipopt::Index i=0; i<n; i++) {
+    std::cout << "x[" << i << "] = " << x[i] << std::endl;
+  }
+  
+  std::cout << std::endl << std::endl << "Solution of the bound multipliers, z_L and z_U" << std::endl;
+  for (Ipopt::Index i=0; i<n; i++) {
+    std::cout << "z_L[" << i << "] = " << z_L[i] << std::endl;
+  }
+  for (Ipopt::Index i=0; i<n; i++) {
+    std::cout << "z_U[" << i << "] = " << z_U[i] << std::endl;
+  }
+  
+  std::cout << std::endl << std::endl << "Objective value" << std::endl;
+  std::cout << "f(x*) = " << obj_value << std::endl;
+  
+  std::cout << std::endl << "Final value of the constraints:" << std::endl;
+  for (Ipopt::Index i=0; i<m ;i++) {
+    std::cout << "g(" << i << ") = " << g[i] << std::endl;
+  }
+}
+
+
 
 
 

@@ -7,7 +7,6 @@
 #include <iterator>
 #include <math_utils.h>
 
-typedef std::vector<double> Vector;
 
 class TPBVP{
 protected: 
@@ -30,6 +29,23 @@ public:
                     n = stateDim;
                     m = controlDim;
                     N = numSteps;
+                  }
+                  
+                  virtual Matrix bv()=0;
+                  
+                  //For initializing optimization recursion
+                  virtual Matrix initialTraj()=0;
+                  Vector initialGuess(){
+                    Matrix init = initialTraj();
+                    assert(not init.empty());
+                    
+                    Vector init_vec;
+                    for(int i=0;i<init.size();i++){
+                      for(int j=0;j<init[0].size();j++){
+                        init_vec.push_back(init[i][j]);
+                      }
+                    }
+                    return init_vec;
                   }
                   
                   //Running cost for cost function
