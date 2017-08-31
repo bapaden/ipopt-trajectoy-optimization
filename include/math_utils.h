@@ -3,7 +3,19 @@
 
 #include <vector>
 #include <iostream>
+#include <cstdio>
+
   typedef std::vector<double> Vector ;
+  
+  class tester{
+    int count;
+  public:
+    tester(){count=0;}
+    void msg(){std::cout << "Test msg: " << count << std::endl;count++;}
+  };
+  
+  class Matrix;
+  void printMatrix(Matrix mat);
   
   //Vector of vectors of doubles (i.e. 2D double array). Adds a constructor for resizing matrix
   class Matrix{
@@ -22,6 +34,20 @@
     Vector& operator[](unsigned int index){return data[index];}
     unsigned int size(){return data.size();}
     bool empty(){return data.empty();}
+    void append_bottom(Matrix mat){
+      data.insert(data.end(),mat.data.begin(),mat.data.end());
+    }
+    void append_right(Matrix mat){
+      std::cout << "before " << std::endl;
+      printMatrix(*this);      
+      assert(mat.size()==data.size());
+      for(int i=0;i<data.size();i++){
+        data[i].insert(data[i].end(),mat[i].begin(),mat[i].end());
+      }
+      std::cout << "after " << std::endl;
+      printMatrix(*this);
+      
+    }
   };
   
   Vector operator+(Vector lhs, Vector rhs){
@@ -40,6 +66,8 @@
     return difference;
   }
   
+  
+  
   Vector operator*(double c, Vector rhs){
     Vector scaled;
     for(int i=0;i<rhs.size();i++)
@@ -56,7 +84,8 @@
     std::cout << "~" << std::endl;
   }
   
-  void printMatrix(   Matrix& matrix ){
+  void printMatrix( Matrix matrix ){
+    std::cout << "size: (" << matrix.size() << "," << matrix[0].size() << std::endl;
     if(matrix.size()>0){
       for(int i=0;i<matrix.size();i++){
         std::cout << "|";

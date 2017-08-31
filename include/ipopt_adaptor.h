@@ -10,8 +10,10 @@
 
 class TPBVP{
 protected: 
-  unsigned int stateDim,controlDim,numSteps,n,m,N;
-  double dt;
+  unsigned int n;//state dimension
+  unsigned int m;//control dimension
+  unsigned int N;//number of integration steps
+  double dt;//numerical integration step
   Vector initCond;
   Vector termCond;
   
@@ -21,15 +23,20 @@ public:
                   unsigned int controlDim_,
                   unsigned int numSteps_,
                   double dt_):
-                  stateDim(stateDim_), 
-                  controlDim(controlDim_),
-                  numSteps(numSteps_),
+                  n(stateDim_), 
+                  m(controlDim_),
+                  N(numSteps_),
                   dt(dt_)
                   {
-                    n = stateDim;
-                    m = controlDim;
-                    N = numSteps;
+//                     n = stateDim;
+//                     m = controlDim;
+//                     N = numSteps;
                   }
+                  
+                  unsigned int stateDim(){return n;}
+                  unsigned int controlDim(){return m;}
+                  unsigned int numSteps(){return N;}
+                  double timeStep(){return dt;}
                   
                   virtual Matrix bv()=0;
                   
@@ -49,20 +56,20 @@ public:
                   }
                   
                   //Running cost for cost function
-                  virtual double g(Vector x, Vector u)=0;
+                  virtual double g(Vector x, Vector u, double dt)=0;
                   double g(Vector y, unsigned int index){
-                    Vector x(stateDim);
-                    Vector u(controlDim);
+                    Vector x(n);
+                    Vector u(m);
                     
-                    for(int i=0;i<stateDim;i++){
+                    for(int i=0;i<n;i++){
                       x[i] = y[index];
                       index++;
                     }
-                    for(int i=0;i<controlDim;i++){
+                    for(int i=0;i<m;i++){
                       u[i] = y[index];
                       index++;
                     }
-                    return g(x,u);
+                    return g(x,u,y[(N+1)*(n+m)]);
                   }
                   
                   double J(Vector y){
@@ -78,14 +85,14 @@ public:
                   virtual Vector f(Vector x_, Vector u_)=0;
                                     
                   Vector f(Vector y, unsigned int index) {
-                    Vector x(stateDim);
-                    Vector u(controlDim);
+                    Vector x(n);
+                    Vector u(m);
                     
-                    for(int i=0;i<stateDim;i++){
+                    for(int i=0;i<n;i++){
                       x[i] = y[index];
                       index++;
                     }
-                    for(int i=0;i<controlDim;i++){
+                    for(int i=0;i<m;i++){
                       u[i] = y[index];
                       index++;
                     }
@@ -112,11 +119,11 @@ public:
                   
                   //vector structure [x[0] u[0] x[1] u[1] ... dt]
                   Vector phi(Vector& y){
-                    int n = stateDim;
-                    int m = controlDim;
-                    int N = numSteps;
+//                     int n = stateDim;
+//                     int m = controlDim;
+//                     int N = numSteps;
                     assert(y.size()==(N+1)*(n+m)+1);
-                    double dt = y[(N+1)*(n+m)];
+//                     double dt = y[(N+1)*(n+m)];
                     
                     Vector residual;
                     //time step j from 0 to N-2 
@@ -134,7 +141,7 @@ public:
                   ///~~~Gradients~~~///
                   
                   //Gradient of the running cost
-                  virtual Vector Dg(Vector x, Vector y)=0;
+                  virtual Vector Dg(Vector x, Vector y, double dt)=0;
                   Vector Dg(Vector y, unsigned int index){
                     Vector x(n);
                     Vector u(m);
@@ -147,7 +154,11 @@ public:
                       u[i] = y[index];
                       index++;
                     }
-                    return Dg(x,u);
+                    
+                    Vector grad_running_cost = Dg(x,u,y[(N+1)*(n+m)]);
+//                     grad_running_cost.push_back(0);
+                    
+                    return grad_running_cost;
                   }
                     
                   
@@ -156,8 +167,6 @@ public:
                     Vector dJdx(y.size());
                     for(int j=0;j<N+1;j++){
                       Vector gradRunningCost = Dg(y,j*(n+m));
-                      std::cout << "local grad " << std::endl;
-                      printVector(gradRunningCost);
                       for(int i=0;i<n+m;i++){
                         dJdx[j*(n+m)+i] = gradRunningCost[i];
                       }
@@ -185,33 +194,33 @@ public:
                   
                   //Numerical approximation to first variation diff constraint with respect to (x,u)
                   Matrix Dphi(Vector y){
-                    
-                    int n = stateDim;
-                    int m = controlDim;
-                    int N = numSteps;
-                    double dt = y[(N+1)*(n+m)];
+//                     int n = stateDim;
+//                     int m = controlDim;
+//                     int N = numSteps;
+//                     double dt = y[(N+1)*(n+m)];
                     double count = 0;
-                    Matrix dgdy(n*N,(N+1)*(n+m));
+                    Matrix dgdy(n*N,(N+1)*(n+m)+1);
                     for(int p=0;p<N;p++){
                       Vector xdot = f(y,p*(n+m));
                       for(int q=0;q<n;q++){
-                        dgdy[p*n+q][(N+1)*(n+m)-1] = xdot[q];
+                        dgdy[p*n+q][(N+1)*(n+m)] = xdot[q];//w.r.t. dt
+                        printMatrix(dgdy);
                         for(int j=0;j<N+1;j++){
                           Matrix dfdx = Df(y,j*(m+n));
                           for(int i=0;i<n+m;i++){
                             if(p==j){
-                              if(i<n){dgdy[p*n+q][j*(n+m)+i]= -1.0 - dt*dfdx[q][i];}
-                              else{dgdy[p*n+q][j*(n+m)+i]=dt*dfdx[q][i];}
+                              if(i<n){dgdy[p*n+q][j*(n+m)+i]= -1.0 - y[(N+1)*(n+m)]*dfdx[q][i];}//w.r.t. x[i]
+                              else{dgdy[p*n+q][j*(n+m)+i]=y[(N+1)*(n+m)]*dfdx[q][i];}//w.r.t. u[i]
                             }
-                            if(j-1==p and i == q){dgdy[p*n+q][j*(n+m)+i]=1;}
+                            if(j-1==p and i == q){dgdy[p*n+q][j*(n+m)+i]=1;}//w.r.t. x[i+1]
                           }
                         }
                       }    
-                    }  
+                    } 
                     return dgdy;
                   }
                   
-                  //User provides gradient of state constraints
+                  //User provides jacobian of state constraints
                   virtual Matrix Dh(Vector x, Vector u)=0;
                   //Overload for convenience
                   Matrix Dh(Vector y, unsigned int index){
@@ -227,7 +236,12 @@ public:
                       index++;
                     }
                     
-                    return Dh(x,u);
+                    Matrix jacobian_constraints = Dh(x,u);
+                    Matrix zeros(jacobian_constraints[0].size(),1);
+                    printMatrix(zeros);
+                    jacobian_constraints.append_right(zeros);//w.r.t. dt
+                    
+                    return jacobian_constraints;
                   }
                   
                   //Apply the user specified constraint to each timestep
@@ -246,14 +260,15 @@ public:
                       Vector h_t( h(x,u) );
                       H_.insert(H_.end(),h_t.begin(),h_t.end());
                     }
+                    
+                    std::cout << "pointwise constraint is a vector of size " << H_.size() << std::endl;
                     return H_;
                   }
                   
                   //Essentially the first variation of the state-control constraints
                   Matrix DH(Vector y){
                     std::size_t k = (h(y,0)).size();
-                    std::cout << "k" << k << std::endl;
-                    Matrix dHdx(k*(N+1),(n+m)*(N+1));
+                    Matrix dHdx(k*(N+1),(n+m)*(N+1)+1);
                     for(int p=0;p<N+1;p++){
                       for(int q=0;q<k;q++){
                         Matrix dhdx = Dh(y,p*(n+m));
@@ -264,13 +279,14 @@ public:
                         }
                       }
                     }
+                    std::cout << "grad pw-constraint size (" << dHdx.size() << "," << dHdx[0].size() << std::endl;
+                    printMatrix(dHdx);
                     return dHdx;
                   }
                   
-                  double timeStep(){return dt;}
-                  unsigned int steps(){return numSteps;}
-                  unsigned int state_dimension(){return stateDim;}
-                  unsigned int control_dimension(){return controlDim;}
+//                   unsigned int steps(){return numSteps;}
+//                   unsigned int state_dimension(){return stateDim;}
+//                   unsigned int control_dimension(){return controlDim;}
 };
 
 #endif

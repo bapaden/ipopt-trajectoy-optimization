@@ -39,6 +39,7 @@
 class TrajOpt : public Ipopt::TNLP
 {
   TPBVP* myProb;
+  tester t;
   int n;//number of states
   int m;//number of controls
   int N;//number of time steps
@@ -164,9 +165,9 @@ private:
 // constructor
 TrajOpt::TrajOpt(TPBVP* myProb_){
   myProb=myProb_;
-  n=myProb->n;
-  m=myProb->m;
-  N=myProb->N;
+  n=myProb->stateDim();
+  m=myProb->controlDim();
+  N=myProb->numSteps();
 }
 
 //destructor
@@ -184,10 +185,14 @@ bool TrajOpt::get_nlp_info(Ipopt::Index& numVars,
   numVars = (N+1)*(n+m)+1;
   
   // Constraints for the dynamics and state-control constraint
-  numCons = N*(n+m)+(myProb->H(Vector(numVars))).size();
+  numCons = N*n+(myProb->H(Vector(numVars))).size();
+  printf("numVars in get_nlp_info: %d \n",numVars);
+  printf("numCons in get_nlp_info: %d \n",numCons);
+  
   
   //Number of nonzero entries in dgdz
   nnz_jac_g = numVars*numCons;
+  printf("nnz_jac_g in get_nlp_info: %d ",nnz_jac_g);
   
   // the hessian is also dense and has 16 total nonzeros, but we
   // only need the lower left corner (since it is symmetric)
@@ -195,6 +200,9 @@ bool TrajOpt::get_nlp_info(Ipopt::Index& numVars,
   
   // use the C style indexing (0-based)
   index_style = Ipopt::TNLP::C_STYLE;
+
+  printf("numVars in get_nlp_info: %d \n",numVars);
+  printf("numCons in get_nlp_info: %d \n",numCons);
   
   return true;
 }
@@ -210,32 +218,41 @@ bool TrajOpt::get_bounds_info(Ipopt::Index numVars,
   // here, the n and m we gave IPOPT in get_nlp_info are passed back to us.
   // If desired, we could assert to make sure they are what we think they are.
   assert(numVars == (N+1)*(n+m)+1);
-  assert(numCons == N*(n+m)+(myProb->H(Vector(numVars))).size());
+  assert(numCons == N*n+(myProb->H(Vector(numVars))).size());
 
+  printf("numVars in get_bounds_info: %d \n",numVars);
+  printf("numCons in get_bounds_info: %d \n",numCons);
+  
+  
   for(int i=0;i<numVars;i++){
     y_l[i]=std::numeric_limits<double>::min();//+infinity
     y_u[i]=std::numeric_limits<double>::max();//-infinity
   }
   
   // Initial condition
+  printf("\ninitial condition");
   for(int i=0; i<n; i++) {
-    y_l[i] =y_u[i] = (myProb->bv())[0][i];
+    std::cout << std::endl << (myProb->bv())[0][i] << ",";
+    y_l[i] = y_u[i] = (myProb->bv())[0][i];
   }
   
   // Terminal condition
+  printf("\nterminal condition");
   for(int i=0;i<n; i++){
+    std::cout <<std::endl << (myProb->bv())[1][i] << "," ;
     y_l[N*(n+m)+i] = y_u[N*(n+m)+i] = (myProb->bv())[1][i];
   }
   
   // Equality constraints for dynamic feasibility
-  for(int i=0;i<(N+1)*(n+m);i++){
-    g_l[i]=g_u[i]=0.0;
+  for(int i=0;i<n*N;i++){
+    g_l[i]=0.0;
+    g_u[i]=0.0;
   }
   
   //constrants for h(x,u)<=0 
-  for(int i=0;i<numCons;i++){
-    g_l[(N+1)*(n+m)+i] = std::numeric_limits<double>::min();
-    g_u[(N+1)*(n+m)+i] = 0.0;
+  for(int i=N*n;i<numCons;i++){
+    g_l[i] = -std::numeric_limits<double>::max();
+    g_u[i] = 0.0;
   }
   
   return true;
@@ -268,56 +285,66 @@ bool TrajOpt::get_starting_point(Ipopt::Index numVars,
 }
 
 // returns the value of the objective function
-bool TrajOpt::eval_f(Ipopt::Index n, 
-                     const Ipopt::Number* x, 
+bool TrajOpt::eval_f(Ipopt::Index numVars, 
+                     const Ipopt::Number* y_, 
                      bool new_x, Ipopt::Number& obj_value)
 {
-  assert(n == 4);
-  
-  obj_value = x[0] * x[3] * (x[0] + x[1] + x[2]) + x[2];
-  
+//   dataVec.insert(dataVec.end(), &dataArray[0], &dataArray[dataArraySize]);
+  Vector y;
+  y.insert(y.end(), &y_[0], &y_[numVars-1]); 
+  obj_value = myProb->J(y);
+   
   return true;
 }
 
 // return the gradient of the objective function grad_{x} f(x)
-bool TrajOpt::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x, bool new_x, Ipopt::Number* grad_f)
-{
-  assert(n == 4);
+bool TrajOpt::eval_grad_f(Ipopt::Index numVars, const Ipopt::Number* y_, bool new_y, Ipopt::Number* grad_f){
+
+  Vector y;
+  y.insert(y.end(), &y_[0], &y_[numVars-1]); 
   
-  grad_f[0] = x[0] * x[3] + x[3] * (x[0] + x[1] + x[2]);
-  grad_f[1] = x[0] * x[3];
-  grad_f[2] = x[0] * x[3] + 1;
-  grad_f[3] = x[0] * (x[0] + x[1] + x[2]);
-  
-  return true;
+  //Never tried this... new cpp standard needed probably 
+   Vector DJ = myProb->DJ(y);
+   grad_f = &DJ[0];
+   
+   return true;
 }
 
 // return the value of the constraints: g(x)
-bool TrajOpt::eval_g(Ipopt::Index n, 
-                     const Ipopt::Number* x, 
-                     bool new_x, 
-                     Ipopt::Index m, 
+bool TrajOpt::eval_g(Ipopt::Index numVars, 
+                     const Ipopt::Number* y_, 
+                     bool new_y, 
+                     Ipopt::Index numCons, 
                      Ipopt::Number* g)
 {
-  assert(n == 4);
-  assert(m == 2);
   
-  g[0] = x[0] * x[1] * x[2] * x[3];
-  g[1] = x[0]*x[0] + x[1]*x[1] + x[2]*x[2] + x[3]*x[3];
+  Vector y;
+  y.insert(y.end(), &y_[0], &y_[numVars-1]); 
+ 
   
+  //Constraints related to dynamic feasibility
+  Vector A = myProb->phi(y);
+  //Point-wise constraints on state and control
+  Vector B = myProb->H(y);
+  A.insert(A.end(), B.begin(), B.end());
+  
+  g = &A[0];
+
   return true;
 }
 
 // return the structure or values of the jacobian
-bool TrajOpt::eval_jac_g(Ipopt::Index n, 
-                         const Ipopt::Number* x, bool new_x,
-                         Ipopt::Index m, 
+bool TrajOpt::eval_jac_g(Ipopt::Index numVars, 
+                         const Ipopt::Number* y_,
+                         bool new_y,
+                         Ipopt::Index numCons, 
                          Ipopt::Index nele_jac, 
                          Ipopt::Index* iRow, 
                          Ipopt::Index *jCol,
                          Ipopt::Number* values)
 {
   if (values == NULL) {
+    std::cout << "shouldn't be here... 1854" << std::endl;//Since we are treating as dense we are not filling out
     // return the structure of the jacobian
     
     // this particular jacobian is dense
@@ -341,26 +368,54 @@ bool TrajOpt::eval_jac_g(Ipopt::Index n,
   else {
     // return the values of the jacobian of the constraints
     
-    values[0] = x[1]*x[2]*x[3]; // 0,0
-    values[1] = x[0]*x[2]*x[3]; // 0,1
-    values[2] = x[0]*x[1]*x[3]; // 0,2
-    values[3] = x[0]*x[1]*x[2]; // 0,3
+    Vector y;
+    y.insert(y.end(), &y_[0], &y_[numVars-1]); 
     
-    values[4] = 2*x[0]; // 1,0
-    values[5] = 2*x[1]; // 1,1
-    values[6] = 2*x[2]; // 1,2
-    values[7] = 2*x[3]; // 1,3
+    
+    nele_jac=numCons*numVars;
+    
+    Matrix jac = myProb->Dphi(y);
+    std::cout << "variation dynamic constraint" << std::endl;
+    printMatrix(jac);
+    std::cout << " variation pointwise constraint " << std::endl;
+    printMatrix(myProb->DH(y) );
+    
+    jac.append_bottom( myProb->DH(y) );
+    printMatrix(jac);
+    assert(numCons == jac.size() );
+    std::cout << jac.size() << std::endl;
+    std::cout << jac[0].size() << " vs " << numVars << std::endl;
+    assert(numVars == jac[0].size() );
+
+    std::cout << "constraint jacobian " << std::endl;
+    printMatrix(jac);  
+    
+    for(int j=0;j<jac.size();j++){
+      for(int i=0;i<jac[0].size();i++){
+        values[j*(n+m)+i]=jac[j][i];
+      }
+    }
+    
+//     values[0] = x[1]*x[2]*x[3]; // 0,0
+//     values[1] = x[0]*x[2]*x[3]; // 0,1
+//     values[2] = x[0]*x[1]*x[3]; // 0,2
+//     values[3] = x[0]*x[1]*x[2]; // 0,3
+//     
+//     values[4] = 2*x[0]; // 1,0
+//     values[5] = 2*x[1]; // 1,1
+//     values[6] = 2*x[2]; // 1,2
+//     values[7] = 2*x[3]; // 1,3
   }
   
   return true;
 }
 
 //return the structure or values of the hessian
-bool TrajOpt::eval_h(Ipopt::Index n, 
-                     const Ipopt::Number* x, 
-                     bool new_x,
+bool TrajOpt::eval_h(Ipopt::Index numVars, 
+                     const Ipopt::Number* y_, 
+                     bool new_y,
                      Ipopt::Number obj_factor, 
-                     Ipopt::Index m, 
+                     Ipopt::Index numCons, 
                      const Ipopt::Number* lambda,
                      bool new_lambda, 
                      Ipopt::Index nele_hess, 
@@ -368,7 +423,9 @@ bool TrajOpt::eval_h(Ipopt::Index n,
                      Ipopt::Index* jCol, 
                      Ipopt::Number* values)
 {
-  return false;
+  std::cout << "eval_h" << std::endl;
+  
+  return false;//Too lazy to compute this. Just use bfgs
 }
 
 void TrajOpt::finalize_solution(Ipopt::SolverReturn status,

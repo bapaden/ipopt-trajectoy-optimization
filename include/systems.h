@@ -18,13 +18,13 @@ public:
   //~~~Cost, Dynamics, Constraints, Boundary conditions~~~//
   
   //Define the running cost g(x(t),u(t)) whose integral is the cost
-  double g(Vector x, Vector u) final {
-    return 1 + x[0]*x[0] + u[0]*u[0] ;
+  double g(Vector x, Vector u, double dt) final {
+    return N*dt + x[0]*x[0] + u[0]*u[0] ;
   }
   
   //System dynamics dx/dt = f(x(t),u(t)) 
   Vector  f(Vector  x, Vector  u) final {
-    Vector  xdot(stateDim);
+    Vector  xdot(n);
     xdot[0] = -x[0]+u[0];
     return xdot;
   }
@@ -65,7 +65,7 @@ public:
     }
     
     std::cout << " Initial guess is " << std::endl;
-    init;
+    printMatrix(init);
     
     return init;
   }
@@ -73,13 +73,13 @@ public:
   //~~~Derivatives of problem system attributes~~~///
   
   //Gradient of running cost
-  Vector Dg(Vector x, Vector u) final {
-    return Vector({2*x[0],2*u[0]});
+  Vector Dg(Vector x, Vector u, double dt) final {
+    return Vector({N+2*x[0],2*u[0]});
   }
   
   //Jacobian of the dynamics with respect to (x,u). Df = [df/dx, df/du]
   Matrix Df(Vector x, Vector u) final {
-    Matrix Jacobian(stateDim,stateDim+controlDim);
+    Matrix Jacobian(n,n+m);
     Jacobian[0][0] = -1.0;
     Jacobian[0][1] = 1.0;
     return Jacobian;
@@ -105,7 +105,7 @@ public:
   
   //xdot = f(x,u) - dynamical model of a pendulum
   Vector  f(Vector  x, Vector  u) final {
-    Vector  xdot(stateDim);
+    Vector  xdot(n);
     xdot[0] = x[1];
     xdot[1] = -sin(x[0])+u[0];
     
@@ -116,7 +116,7 @@ public:
 Matrix Df(Vector x, Vector u) final {
     
     //create 2x3 matrix for jacobian
-    Matrix Jacobian(stateDim,stateDim+controlDim);
+    Matrix Jacobian(n,n+m);
     
     Jacobian[0][0] = 0; 
     Jacobian[0][1] = 1; 

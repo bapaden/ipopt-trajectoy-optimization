@@ -37,10 +37,10 @@ int main(){
     t+=dt;
     
     //Append the new state and control to the vector y
-    for(int j=0;j<sys.state_dimension();j++){
+    for(int j=0;j<sys.stateDim();j++){
       y.push_back(x[j]);
     }
-    for(int j=0;j<sys.control_dimension();j++){
+    for(int j=0;j<sys.controlDim();j++){
       y.push_back(u[0]);
     }
   }
