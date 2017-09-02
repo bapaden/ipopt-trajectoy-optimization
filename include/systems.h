@@ -19,13 +19,13 @@ public:
   
   //Define the running cost g(x(t),u(t)) whose integral is the cost
   double g(Vector x, Vector u, double dt) final {
-    return N*dt + x[0]*x[0] + u[0]*u[0] ;
+    return 1;
   }
   
   //System dynamics dx/dt = f(x(t),u(t)) 
   Vector  f(Vector  x, Vector  u) final {
     Vector  xdot(n);
-    xdot[0] = -x[0]+u[0];
+    xdot[0] = u[0];
     return xdot;
   }
   
@@ -33,8 +33,8 @@ public:
   Vector  h(Vector  x, Vector  u) final {
     assert(x.size()==n and u.size()==m);
     Vector  h;
-    h.push_back(-0.25-x[0]);
-    h.push_back(u[0]-0.5);
+    h.push_back(-2.0-x[0]);
+    h.push_back(-u[0]-2.0);
     
     return h;
   }
@@ -53,19 +53,19 @@ public:
     Matrix boundary = bv();
     Matrix init(N+1,m+n);
     
-    Vector control(m);
-    Vector ic = boundary[0];
-    ic.insert(ic.end(),control.begin(),control.end());
-    Vector tc = boundary[1];
-    tc.insert(tc.end(),control.begin(),control.end());
+//     Vector control(m);
+//     Vector ic = boundary[0];
+//     ic.insert(ic.end(),control.begin(),control.end());
+//     Vector tc = boundary[1];
+//     tc.insert(tc.end(),control.begin(),control.end());
+//     
+//     for(int i=0;i<N+1;i++){
+//       double lambda = double(i)/double(N);
+//       init[i]=lambda*ic + (1.0-lambda)*tc; 
+//     }
     
-    for(int i=0;i<N+1;i++){
-      double lambda = double(i)/double(N);
-      init[i]=lambda*ic + (1.0-lambda)*tc; 
-    }
-    
-    std::cout << " Initial guess is " << std::endl;
-    printMatrix(init);
+//     std::cout << " Initial guess is " << std::endl;
+//     printMatrix(init);
     
     return init;
   }
@@ -73,14 +73,14 @@ public:
   //~~~Derivatives of problem system attributes~~~///
   
   //Gradient of running cost
-  Vector Dg(Vector x, Vector u, double dt) final {
-    return Vector({N+2*x[0],2*u[0]});
+  Vector Dg(Vector x, Vector u) final {
+    return Vector({0.0});
   }
   
   //Jacobian of the dynamics with respect to (x,u). Df = [df/dx, df/du]
   Matrix Df(Vector x, Vector u) final {
     Matrix Jacobian(n,n+m);
-    Jacobian[0][0] = -1.0;
+    Jacobian[0][0] = 0.0;
     Jacobian[0][1] = 1.0;
     return Jacobian;
   }
@@ -92,7 +92,7 @@ public:
     dhdx[0][0] = -1;//d/dx h_1(x,u)
     dhdx[0][1] = 0; //d/du h_1(x,u)
     dhdx[1][0] = 0; //d/dx h_2(x,u)
-    dhdx[1][1] = 1;//d/du h_2(x,u)
+    dhdx[1][1] = -1;//d/du h_2(x,u)
     
     return dhdx;
   }

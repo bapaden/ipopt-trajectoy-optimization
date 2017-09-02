@@ -46,10 +46,10 @@ class TrajOpt : public Ipopt::TNLP
 public:
   /** default constructor */
   TrajOpt(TPBVP* myProb_);
-
+  
   /** default destructor */
   virtual ~TrajOpt();
-
+  
   /**@name Overloaded from TNLP */
   //@{
   /** Method to return some info about the nlp */
@@ -58,7 +58,7 @@ public:
                             Ipopt::Index& nnz_jac_g,
                             Ipopt::Index& nnz_h_lag, 
                             Ipopt::TNLP::IndexStyleEnum& index_style);
-
+  
   /** Method to return the bounds for my problem */
   virtual bool get_bounds_info(Ipopt::Index n,
                                Ipopt::Number* x_l, 
@@ -66,7 +66,7 @@ public:
                                Ipopt::Index m, 
                                Ipopt::Number* g_l, 
                                Ipopt::Number* g_u);
-
+  
   /** Method to return the starting point for the algorithm */
   virtual bool get_starting_point(Ipopt::Index n, 
                                   bool init_x, 
@@ -77,26 +77,26 @@ public:
                                   Ipopt::Index m, 
                                   bool init_lambda,
                                   Ipopt::Number* lambda);
-
+  
   /** Method to return the objective value */
   virtual bool eval_f(Ipopt::Index n, 
                       const Ipopt::Number* x, 
                       bool new_x, 
                       Ipopt::Number& obj_value);
-
+  
   /** Method to return the gradient of the objective */
   virtual bool eval_grad_f(Ipopt::Index n, 
                            const Ipopt::Number* x, 
                            bool new_x, 
                            Ipopt::Number* grad_f);
-
+  
   /** Method to return the constraint residuals */
   virtual bool eval_g(Ipopt::Index n, 
                       const Ipopt::Number* x, 
                       bool new_x, 
                       Ipopt::Index m, 
                       Ipopt::Number* g);
-
+  
   /** Method to return:
    *   1) The structure of the jacobian (if "values" is NULL)
    *   2) The values of the jacobian (if "values" is not NULL)
@@ -109,7 +109,7 @@ public:
                           Ipopt::Index* iRow, 
                           Ipopt::Index *jCol,
                           Ipopt::Number* values);
-
+  
   /** Method to return:
    *   1) The structure of the hessian of the lagrangian (if "values" is NULL)
    *   2) The values of the hessian of the lagrangian (if "values" is not NULL)
@@ -125,9 +125,9 @@ public:
                       Ipopt::Index* iRow,
                       Ipopt::Index* jCol, 
                       Ipopt::Number* values);
-
+  
   //@}
-
+  
   /** @name Solution Methods */
   //@{
   /** This method is called when the algorithm is complete so the TNLP can store/write the solution */
@@ -143,7 +143,7 @@ public:
                                  const Ipopt::IpoptData* ip_data,
                                  Ipopt::IpoptCalculatedQuantities* ip_cq);
   //@}
-
+  
 private:
   /**@name Methods to block default compiler methods.
    * The compiler automatically generates the following three methods.
@@ -200,7 +200,7 @@ bool TrajOpt::get_nlp_info(Ipopt::Index& numVars,
   
   // use the C style indexing (0-based)
   index_style = Ipopt::TNLP::C_STYLE;
-
+  
   printf("numVars in get_nlp_info: %d \n",numVars);
   printf("numCons in get_nlp_info: %d \n",numCons);
   
@@ -219,7 +219,7 @@ bool TrajOpt::get_bounds_info(Ipopt::Index numVars,
   // If desired, we could assert to make sure they are what we think they are.
   assert(numVars == (N+1)*(n+m)+1);
   assert(numCons == N*n+(myProb->H(Vector(numVars))).size());
-
+  
   printf("numVars in get_bounds_info: %d \n",numVars);
   printf("numCons in get_bounds_info: %d \n",numCons);
   
@@ -251,10 +251,13 @@ bool TrajOpt::get_bounds_info(Ipopt::Index numVars,
   
   //constrants for h(x,u)<=0 
   for(int i=N*n;i<numCons;i++){
-    g_l[i] = -std::numeric_limits<double>::max();
+    g_l[i] = -2.0e9;//-std::numeric_limits<double>::max();
     g_u[i] = 0.0;
   }
   
+  for(int i=0;i<numCons;i++){
+    std::cout << std::endl << "(g_l[" << i << "],g_u[" << i << "])=(" << g_l[i] << "," << g_u[i] << std::endl;  
+  }
   return true;
 }
 
@@ -289,25 +292,33 @@ bool TrajOpt::eval_f(Ipopt::Index numVars,
                      const Ipopt::Number* y_, 
                      bool new_x, Ipopt::Number& obj_value)
 {
-//   dataVec.insert(dataVec.end(), &dataArray[0], &dataArray[dataArraySize]);
-  Vector y;
-  y.insert(y.end(), &y_[0], &y_[numVars-1]); 
+  //   dataVec.insert(dataVec.end(), &dataArray[0], &dataArray[dataArraySize]);
+  Vector y(&y_[0],&y_[numVars]);
+  //   y.insert(y.end(), &y_[0], &y_[numVars-1]); 
   obj_value = myProb->J(y);
-   
+  
+  std::cout << " Cost: " << obj_value << std::endl;
+  std::cout << " Decisio Var " << std::endl;
+  printVector(y);
+  
   return true;
 }
 
 // return the gradient of the objective function grad_{x} f(x)
 bool TrajOpt::eval_grad_f(Ipopt::Index numVars, const Ipopt::Number* y_, bool new_y, Ipopt::Number* grad_f){
-
-  Vector y;
-  y.insert(y.end(), &y_[0], &y_[numVars-1]); 
   
+  Vector y(&y_[0], &y_[numVars]);
+  //   y.insert(y.end(), &y_[0], &y_[numVars-1]); 
+  //   std::cout << "what is y" << std::endl;
+  //   printVector(y);
   //Never tried this... new cpp standard needed probably 
-   Vector DJ = myProb->DJ(y);
-   grad_f = &DJ[0];
-   
-   return true;
+  Vector DJ = myProb->DJ(y);
+  grad_f = &DJ[0];
+  std::cout << " Cost gradient: " << std::endl;
+  printVector(DJ);
+  
+  
+  return true;
 }
 
 // return the value of the constraints: g(x)
@@ -317,19 +328,25 @@ bool TrajOpt::eval_g(Ipopt::Index numVars,
                      Ipopt::Index numCons, 
                      Ipopt::Number* g)
 {
-  
-  Vector y;
-  y.insert(y.end(), &y_[0], &y_[numVars-1]); 
- 
+  //   std::cout << "numVars " << numVars << std::endl;
+  Vector y(&y_[0], &y_[numVars]);
+  //   y.insert(y.begin(), &y_[0], &y_[numVars]); 
+  //   std::cout << "y_ " << y_[0] << "," << y_[1] << "," << y_[2] << "," << y_[3] << "," << y_[4] << std::endl;
   
   //Constraints related to dynamic feasibility
+  //   std::cout << "A: ";
   Vector A = myProb->phi(y);
   //Point-wise constraints on state and control
   Vector B = myProb->H(y);
   A.insert(A.end(), B.begin(), B.end());
+  //   std::cout << "\n\nDecision Variable: " << std::endl;
+  //   printVector(y);
+  std::cout << " Constraints: " << std::endl;
+  printVector(A);
+  //   printf("\n\n");
   
   g = &A[0];
-
+  
   return true;
 }
 
@@ -344,67 +361,42 @@ bool TrajOpt::eval_jac_g(Ipopt::Index numVars,
                          Ipopt::Number* values)
 {
   if (values == NULL) {
-    std::cout << "shouldn't be here... 1854" << std::endl;//Since we are treating as dense we are not filling out
-    // return the structure of the jacobian
-    
+    //     std::cout << "Getting sparsity pattern" << std::endl;
+    int k=0;
     // this particular jacobian is dense
-    iRow[0] = 0;
-    jCol[0] = 0;
-    iRow[1] = 0;
-    jCol[1] = 1;
-    iRow[2] = 0;
-    jCol[2] = 2;
-    iRow[3] = 0;
-    jCol[3] = 3;
-    iRow[4] = 1;
-    jCol[4] = 0;
-    iRow[5] = 1;
-    jCol[5] = 1;
-    iRow[6] = 1;
-    jCol[6] = 2;
-    iRow[7] = 1;
-    jCol[7] = 3;
+    for(int i=0;i<5;i++){//TODO not 5
+      for(int j=0;j<(N+1)*(n+m)+1;j++){
+        iRow[k]=i; jCol[k]=j; 
+        //         std::cout << "index: " << k << "  (i,j)=(" << i << "," << j << ")" << std::endl;
+        k++;
+      }
+    }
   }
   else {
     // return the values of the jacobian of the constraints
     
-    Vector y;
-    y.insert(y.end(), &y_[0], &y_[numVars-1]); 
+    Vector y(&y_[0], &y_[numVars]);
+    //     y.insert(y.end(), &y_[0], &y_[numVars-1]); 
     
     
     nele_jac=numCons*numVars;
     
     Matrix jac = myProb->Dphi(y);
-    std::cout << "variation dynamic constraint" << std::endl;
-    printMatrix(jac);
-    std::cout << " variation pointwise constraint " << std::endl;
-    printMatrix(myProb->DH(y) );
     
     jac.append_bottom( myProb->DH(y) );
-    printMatrix(jac);
-    assert(numCons == jac.size() );
-    std::cout << jac.size() << std::endl;
-    std::cout << jac[0].size() << " vs " << numVars << std::endl;
     assert(numVars == jac[0].size() );
-
-    std::cout << "constraint jacobian " << std::endl;
-    printMatrix(jac);  
     
-    for(int j=0;j<jac.size();j++){
-      for(int i=0;i<jac[0].size();i++){
-        values[j*(n+m)+i]=jac[j][i];
+    int k=0;
+    std::cout << " Jacobian:" << jac.size() << std::endl; 
+    printMatrix(jac);
+    for(int i=0;i<jac[0].size();i++){
+      for(int j=0;j<jac.size();j++){
+        values[k]=jac[i][j];
+        
+        //         std::cout << "value: " << values[k] << " index: " << k << "Position: (i,j)=(" << i << "," << j << ")" << std::endl;
+        k++;
       }
     }
-    
-//     values[0] = x[1]*x[2]*x[3]; // 0,0
-//     values[1] = x[0]*x[2]*x[3]; // 0,1
-//     values[2] = x[0]*x[1]*x[3]; // 0,2
-//     values[3] = x[0]*x[1]*x[2]; // 0,3
-//     
-//     values[4] = 2*x[0]; // 1,0
-//     values[5] = 2*x[1]; // 1,1
-//     values[6] = 2*x[2]; // 1,2
-//     values[7] = 2*x[3]; // 1,3
   }
   
   return true;
@@ -423,7 +415,7 @@ bool TrajOpt::eval_h(Ipopt::Index numVars,
                      Ipopt::Index* jCol, 
                      Ipopt::Number* values)
 {
-  std::cout << "eval_h" << std::endl;
+  //   std::cout << "eval_h" << std::endl;
   
   return false;//Too lazy to compute this. Just use bfgs
 }
@@ -449,6 +441,8 @@ void TrajOpt::finalize_solution(Ipopt::SolverReturn status,
     std::cout << "x[" << i << "] = " << x[i] << std::endl;
   }
   
+  
+  
   std::cout << std::endl << std::endl << "Solution of the bound multipliers, z_L and z_U" << std::endl;
   for (Ipopt::Index i=0; i<n; i++) {
     std::cout << "z_L[" << i << "] = " << z_L[i] << std::endl;
@@ -465,9 +459,5 @@ void TrajOpt::finalize_solution(Ipopt::SolverReturn status,
     std::cout << "g(" << i << ") = " << g[i] << std::endl;
   }
 }
-
-
-
-
 
 #endif

@@ -36,7 +36,6 @@ public:
                   unsigned int stateDim(){return n;}
                   unsigned int controlDim(){return m;}
                   unsigned int numSteps(){return N;}
-                  double timeStep(){return dt;}
                   
                   virtual Matrix bv()=0;
                   
@@ -52,6 +51,9 @@ public:
                         init_vec.push_back(init[i][j]);
                       }
                     }
+                    init_vec.push_back(dt);
+                    std::cout << " initial guess " << std::endl;
+                    printVector(init_vec);
                     return init_vec;
                   }
                   
@@ -74,8 +76,8 @@ public:
                   
                   double J(Vector y){
                     double cost(0);
-                    for(int j=0;j<N+1;j++){
-                      cost+=g(y,j*(n+m));
+                    for(int j=0;j<N;j++){
+                      cost+=y[(N+1)*(n+m)]*g(y,j*(n+m));
                     }
                     return cost;
                   }
@@ -117,18 +119,12 @@ public:
                     return h(x,u);
                   }
                   
-                  //vector structure [x[0] u[0] x[1] u[1] ... dt]
+                  //vector structure [x[0] u[0] x[1] u[1] dt]
                   Vector phi(Vector& y){
-//                     int n = stateDim;
-//                     int m = controlDim;
-//                     int N = numSteps;
                     assert(y.size()==(N+1)*(n+m)+1);
-//                     double dt = y[(N+1)*(n+m)];
                     
                     Vector residual;
-                    //time step j from 0 to N-2 
                     for(int j=0;j<N;j++){
-                      //state i from 0 to n-1
                       Vector xdot = f(y,j*(n+m));
                       for(int i=0;i<n;i++){
                         double error = y[(j+1)*(n+m)+i]-y[j*(n+m)+i]-y[(N+1)*(n+m)]*xdot[i];
@@ -141,7 +137,7 @@ public:
                   ///~~~Gradients~~~///
                   
                   //Gradient of the running cost
-                  virtual Vector Dg(Vector x, Vector y, double dt)=0;
+                  virtual Vector Dg(Vector x, Vector y)=0;
                   Vector Dg(Vector y, unsigned int index){
                     Vector x(n);
                     Vector u(m);
@@ -155,7 +151,7 @@ public:
                       index++;
                     }
                     
-                    Vector grad_running_cost = Dg(x,u,y[(N+1)*(n+m)]);
+                    Vector grad_running_cost = Dg(x,u);
 //                     grad_running_cost.push_back(0);
                     
                     return grad_running_cost;
@@ -165,12 +161,13 @@ public:
                   //First variation of cost
                   Vector DJ(Vector y){
                     Vector dJdx(y.size());
-                    for(int j=0;j<N+1;j++){
+                    for(int j=0;j<N;j++){
                       Vector gradRunningCost = Dg(y,j*(n+m));
                       for(int i=0;i<n+m;i++){
                         dJdx[j*(n+m)+i] = gradRunningCost[i];
                       }
                     }
+                    dJdx[(N+1)*(n+m)] = J(y)/y[(N+1)*(m+n)];
                     return dJdx;
                   }
                   
@@ -204,7 +201,7 @@ public:
                       Vector xdot = f(y,p*(n+m));
                       for(int q=0;q<n;q++){
                         dgdy[p*n+q][(N+1)*(n+m)] = xdot[q];//w.r.t. dt
-                        printMatrix(dgdy);
+//                         printMatrix(dgdy);
                         for(int j=0;j<N+1;j++){
                           Matrix dfdx = Df(y,j*(m+n));
                           for(int i=0;i<n+m;i++){
@@ -238,7 +235,7 @@ public:
                     
                     Matrix jacobian_constraints = Dh(x,u);
                     Matrix zeros(jacobian_constraints[0].size(),1);
-                    printMatrix(zeros);
+//                     printMatrix(zeros);
                     jacobian_constraints.append_right(zeros);//w.r.t. dt
                     
                     return jacobian_constraints;
@@ -261,7 +258,7 @@ public:
                       H_.insert(H_.end(),h_t.begin(),h_t.end());
                     }
                     
-                    std::cout << "pointwise constraint is a vector of size " << H_.size() << std::endl;
+//                     std::cout << "pointwise constraint is a vector of size " << H_.size() << std::endl;
                     return H_;
                   }
                   
@@ -279,8 +276,8 @@ public:
                         }
                       }
                     }
-                    std::cout << "grad pw-constraint size (" << dHdx.size() << "," << dHdx[0].size() << std::endl;
-                    printMatrix(dHdx);
+//                     std::cout << "grad pw-constraint size (" << dHdx.size() << "," << dHdx[0].size() << std::endl;
+//                     printMatrix(dHdx);
                     return dHdx;
                   }
                   

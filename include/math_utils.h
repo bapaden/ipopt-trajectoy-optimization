@@ -38,14 +38,14 @@
       data.insert(data.end(),mat.data.begin(),mat.data.end());
     }
     void append_right(Matrix mat){
-      std::cout << "before " << std::endl;
-      printMatrix(*this);      
+//       std::cout << "before " << std::endl;
+//       printMatrix(*this);      
       assert(mat.size()==data.size());
       for(int i=0;i<data.size();i++){
         data[i].insert(data[i].end(),mat[i].begin(),mat[i].end());
       }
-      std::cout << "after " << std::endl;
-      printMatrix(*this);
+//       std::cout << "after " << std::endl;
+//       printMatrix(*this);
       
     }
   };
@@ -90,7 +90,7 @@
       for(int i=0;i<matrix.size();i++){
         std::cout << "|";
         for(int j=0;j<matrix[i].size();j++){
-          std::cout << matrix[i][j] << " ";
+          std::cout << double(matrix[i][j]) << " ";
         }
         std::cout << "|" << std::endl;
       }
